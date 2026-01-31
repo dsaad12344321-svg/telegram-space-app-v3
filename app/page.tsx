@@ -68,7 +68,7 @@ export default function Home() {
     <main className="min-h-screen bg-space flex items-center justify-center">
       <div className="glass-card">
         <div className="logo">
-          <img src="/eth.png" />
+          <img src="/eth.jpg" />
         </div>
 
         <div className="coins">💰 {coins} Coins</div>
