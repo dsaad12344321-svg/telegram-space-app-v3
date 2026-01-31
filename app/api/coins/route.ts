@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         error: updateError,
       } = await supabaseServer
         .from("users")
-        .update({ coins: currentUser.coins + 10 })
+        .update({ coins: currentUser.coins + 1 })
         .eq("telegram_id", telegramId)
         .select()
         .single();
@@ -85,3 +85,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
