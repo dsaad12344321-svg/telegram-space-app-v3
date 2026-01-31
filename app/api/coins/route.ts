@@ -3,25 +3,35 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 export async function POST(req: Request) {
   try {
-    const { telegramId, action } = await req.json();
+    const body = await req.json();
+    console.log("BODY:", body);
+
+    const { telegramId, action } = body;
 
     if (!telegramId) {
-      return NextResponse.json(
-        { error: "Missing telegramId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing telegramId" }, { status: 400 });
     }
 
     // 1️⃣ Get user
-    let { data: user } = await supabaseServer
+    const {
+      data: user,
+      error: selectError,
+    } = await supabaseServer
       .from("users")
       .select("*")
       .eq("telegram_id", telegramId)
-      .single();
+      .maybeSingle();
+
+    console.log("SELECT:", user, selectError);
+
+    let currentUser = user;
 
     // 2️⃣ Create user if not exists
-    if (!user) {
-      const { data: newUser } = await supabaseServer
+    if (!currentUser) {
+      const {
+        data: newUser,
+        error: insertError,
+      } = await supabaseServer
         .from("users")
         .insert({
           telegram_id: telegramId,
@@ -30,24 +40,45 @@ export async function POST(req: Request) {
         .select()
         .single();
 
-      user = newUser;
+      console.log("INSERT:", newUser, insertError);
+
+      if (insertError) {
+        return NextResponse.json(
+          { error: insertError.message },
+          { status: 500 }
+        );
+      }
+
+      currentUser = newUser;
     }
 
-    // 3️⃣ Reward logic
+    // 3️⃣ Reward
     if (action === "reward") {
-      const { data: updatedUser } = await supabaseServer
+      const {
+        data: updatedUser,
+        error: updateError,
+      } = await supabaseServer
         .from("users")
-        .update({ coins: user.coins + 10 })
+        .update({ coins: currentUser.coins + 10 })
         .eq("telegram_id", telegramId)
         .select()
         .single();
 
+      console.log("UPDATE:", updatedUser, updateError);
+
+      if (updateError) {
+        return NextResponse.json(
+          { error: updateError.message },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(updatedUser);
     }
 
-    return NextResponse.json(user);
-  } catch (error) {
-    console.error("API ERROR:", error);
+    return NextResponse.json(currentUser);
+  } catch (err) {
+    console.error("API FATAL ERROR:", err);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
